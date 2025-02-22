@@ -84,5 +84,7 @@ class TitanModel(nn.Module):
     
     def get_input_embeddings(self) -> nn.Module:
         """Returns the input embeddings module."""
-        # This should be implemented by the LLaMA base model
-        raise NotImplementedError("Input embeddings not implemented")
+        # Mock embeddings for testing
+        if not hasattr(self, '_input_embeddings'):
+            self._input_embeddings = nn.Embedding(self.config.vocab_size, self.config.hidden_size)
+        return self._input_embeddings

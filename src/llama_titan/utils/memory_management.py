@@ -72,12 +72,17 @@ class MemoryManager:
         buffer_size = sum(getattr(b, 'real_numel', b.numel()) * b.element_size() for b in module.buffers())
         total_size = param_size + buffer_size
         
-        # Check against budget
-        if not self.check_memory_usage(component, total_size):
+        # Check component budget
+        budget = self.component_budgets[component]
+        if total_size > budget:
+            raise RuntimeError(f"Component {component} memory usage exceeds VRAM budget")
+        
+        # Check total VRAM budget
+        if (self.current_usage + total_size) > self.vram_budget:
             raise RuntimeError(
-                f"Component {component} exceeds VRAM budget. "
+                f"Component {component} exceeds total VRAM budget. "
                 f"Size: {total_size / 1024**3:.2f}GB, "
-                f"Budget: {self.component_budgets[component] / 1024**3:.2f}GB"
+                f"Available: {(self.vram_budget - self.current_usage) / 1024**3:.2f}GB"
             )
         
         # Optimize memory allocation for component
