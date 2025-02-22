@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 from typing import Optional, Tuple
 from torch.utils.checkpoint import checkpoint
+from torch.cuda.amp import autocast
 
 from .memory.core import ShortTermMemory
 from .memory.long_term import LongTermMemory
@@ -42,8 +43,9 @@ class TitanModel(nn.Module):
         position_ids: Optional[torch.LongTensor] = None,
         task_ids: Optional[torch.LongTensor] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        # Get embeddings (assumed to be provided by LLaMA base)
-        hidden_states = self.get_input_embeddings()(input_ids)
+        with autocast():
+            # Get embeddings (assumed to be provided by LLaMA base)
+            hidden_states = self.get_input_embeddings()(input_ids)
         
         # Process through short-term memory with gradient checkpointing during training
         if self.training:
