@@ -6,6 +6,7 @@ import pytest
 import torch
 import torch.nn as nn
 import numpy as np
+from unittest.mock import Mock
 from llama_titan.utils.memory_management import MemoryManager
 
 class TestConfig:
@@ -53,21 +54,23 @@ def test_memory_allocation_limits(config):
     # Create a small module that we can actually allocate
     small_module = nn.Linear(100, 100)
     
-    # Mock the parameter size calculation
-    def mock_numel(param):
-        return dim * dim
+    # Create mock parameters with fixed numel value
+    mock_param = Mock()
+    mock_param.numel = Mock(return_value=dim * dim)
+    mock_param.element_size = Mock(return_value=4)  # assuming float32
+    mock_param.real_numel = dim * dim  # Add real_numel attribute
     
-    # Save original numel and replace with mock
-    orig_numel = torch.nn.Parameter.numel
-    torch.nn.Parameter.numel = property(mock_numel)
+    # Save original parameters method and replace with mock
+    orig_parameters = small_module.parameters
+    small_module.parameters = lambda: [mock_param]
     
     try:
         # Verify budget enforcement
         with pytest.raises(RuntimeError, match="memory usage exceeds VRAM budget"):
             manager.register_component('core', small_module)
     finally:
-        # Restore original numel
-        torch.nn.Parameter.numel = orig_numel
+        # Restore original parameters method
+        small_module.parameters = orig_parameters
 
 def test_memory_prefetching_performance(config):
     if not torch.cuda.is_available():
