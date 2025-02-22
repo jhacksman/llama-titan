@@ -5,6 +5,7 @@ Titans Model implementation integrating all memory components.
 import torch
 import torch.nn as nn
 from typing import Optional, Tuple
+from torch.utils.checkpoint import checkpoint
 
 from .memory.core import ShortTermMemory
 from .memory.long_term import LongTermMemory
@@ -44,12 +45,20 @@ class TitanModel(nn.Module):
         # Get embeddings (assumed to be provided by LLaMA base)
         hidden_states = self.get_input_embeddings()(input_ids)
         
-        # Process through short-term memory
-        hidden_states, attention_weights = self.short_term(
-            hidden_states,
-            attention_mask=attention_mask,
-            position_ids=position_ids
-        )
+        # Process through short-term memory with gradient checkpointing during training
+        if self.training:
+            hidden_states, attention_weights = checkpoint(
+                self.short_term,
+                hidden_states,
+                attention_mask,
+                position_ids
+            )
+        else:
+            hidden_states, attention_weights = self.short_term(
+                hidden_states,
+                attention_mask=attention_mask,
+                position_ids=position_ids
+            )
         
         # Process through long-term memory
         hidden_states, surprise_scores = self.long_term(
