@@ -60,7 +60,9 @@ class PersistentMemory(nn.Module):
         attention_scores = attention_scores / torch.sqrt(torch.tensor(self.hidden_size, dtype=torch.float32))
         
         if attention_mask is not None:
-            attention_scores = attention_scores.masked_fill(~attention_mask.unsqueeze(-1), float('-inf'))
+            # Convert attention_mask to boolean and reshape
+            attention_mask = (attention_mask > 0).unsqueeze(-1)
+            attention_scores = attention_scores.masked_fill(~attention_mask, float('-inf'))
         
         attention_probs = torch.softmax(attention_scores, dim=-1)
         

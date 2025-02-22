@@ -40,6 +40,9 @@ class SlidingWindowAttention(nn.Module):
         # Create sliding window attention mask
         window_mask = self._create_sliding_window_mask(seq_length, self.window_size, hidden_states.device)
         if attention_mask is not None:
+            # Convert attention_mask to boolean and reshape
+            attention_mask = (attention_mask > 0).unsqueeze(1).unsqueeze(2)  # [batch_size, 1, 1, seq_length]
+            window_mask = window_mask.unsqueeze(0).unsqueeze(0)  # [1, 1, seq_length, seq_length]
             window_mask = window_mask & attention_mask
 
         # Scaled dot-product attention with sliding window
