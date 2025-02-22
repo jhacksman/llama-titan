@@ -55,10 +55,11 @@ def test_memory_allocation_limits(config):
     small_module = nn.Linear(100, 100)
     
     # Create mock parameters with fixed numel value
-    mock_param = Mock()
+    mock_param = Mock(spec=torch.nn.Parameter)
     mock_param.numel = Mock(return_value=dim * dim)
     mock_param.element_size = Mock(return_value=4)  # assuming float32
     mock_param.real_numel = dim * dim  # Add real_numel attribute
+    mock_param.device = torch.device('cpu')  # Add device attribute
     
     # Save original parameters method and replace with mock
     orig_parameters = small_module.parameters
