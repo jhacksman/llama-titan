@@ -54,12 +54,12 @@ def test_memory_allocation_limits(config):
     small_module = nn.Linear(100, 100)
     
     # Mock the parameter size calculation
-    def mock_numel(self):
+    def mock_numel(param):
         return dim * dim
     
     # Save original numel and replace with mock
     orig_numel = torch.nn.Parameter.numel
-    torch.nn.Parameter.numel = mock_numel
+    torch.nn.Parameter.numel = property(mock_numel)
     
     try:
         # Verify budget enforcement
