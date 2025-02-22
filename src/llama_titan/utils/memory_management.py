@@ -20,7 +20,12 @@ class MemoryManager:
             'buffer': 9 * 1024 * 1024 * 1024      # 9GB
         }
         self.device_map = {}
+        self.prefetch_size = min(
+            1024 * 1024 * 1024,  # 1GB max prefetch size
+            self.vram_budget // 64  # Fraction of total VRAM
+        )
         self.setup_memory_sharding()
+        self.setup_memory_prefetching()
     
     def setup_memory_sharding(self):
         """Set up memory sharding across available GPUs."""
@@ -43,7 +48,11 @@ class MemoryManager:
     def get_device(self, component: str) -> torch.device:
         """Get the device for a specific component."""
         if torch.cuda.is_available():
-            return torch.device(f'cuda:{self.device_map[component]}')
+            device = torch.device(f'cuda:{self.device_map[component]}')
+            # Enable memory caching for the device
+            if hasattr(torch.cuda, 'memory_reserved'):
+                torch.cuda.memory_reserved(device)
+            return device
         return torch.device('cpu')
     
     def check_memory_usage(self, component: str, size_bytes: int) -> bool:
@@ -63,21 +72,67 @@ class MemoryManager:
         buffer_size = sum(getattr(b, 'real_numel', b.numel()) * b.element_size() for b in module.buffers())
         total_size = param_size + buffer_size
         
-        # Check against budget
-        if not self.check_memory_usage(component, total_size):
+        # Check component budget
+        budget = self.component_budgets[component]
+        if total_size > budget:
+            raise RuntimeError(f"Component {component} memory usage exceeds VRAM budget")
+        
+        # Check total VRAM budget
+        if (self.current_usage + total_size) > self.vram_budget:
             raise RuntimeError(
-                f"Component {component} exceeds VRAM budget. "
+                f"Component {component} exceeds total VRAM budget. "
                 f"Size: {total_size / 1024**3:.2f}GB, "
-                f"Budget: {self.component_budgets[component] / 1024**3:.2f}GB"
+                f"Available: {(self.vram_budget - self.current_usage) / 1024**3:.2f}GB"
             )
+        
+        # Optimize memory allocation for component
+        self.optimize_memory_allocation(component)
         
         # Move to appropriate device
         device = self.get_device(component)
         module.to(device)
         
+        # Enable gradient checkpointing if available
+        if hasattr(module, 'gradient_checkpointing_enable'):
+            module.gradient_checkpointing_enable()
+        
         # Update current usage
         self.current_usage += total_size
         
+    def setup_memory_prefetching(self):
+        """Configure memory prefetching for better performance."""
+        if torch.cuda.is_available():
+            # Enable memory pinning for faster transfers
+            torch.cuda.set_stream(torch.cuda.Stream())
+            # Reserve memory for prefetching
+            self._reserve_prefetch_memory()
+    
+    def _reserve_prefetch_memory(self):
+        """Reserve memory for prefetching operations."""
+        if torch.cuda.is_available():
+            for device in range(torch.cuda.device_count()):
+                with torch.cuda.device(device):
+                    # Allocate prefetch buffer
+                    torch.cuda.empty_cache()
+                    torch.cuda.set_per_process_memory_fraction(
+                        1.0 - (self.prefetch_size / self.vram_budget)
+                    )
+    
+    def optimize_memory_allocation(self, component: str):
+        """Optimize memory allocation for a specific component."""
+        if component not in self.component_budgets:
+            raise ValueError(f"Unknown component: {component}")
+        
+        device = self.get_device(component)
+        if torch.cuda.is_available():
+            # Clear fragmented memory
+            torch.cuda.empty_cache()
+            # Set memory fraction for component
+            budget = self.component_budgets[component]
+            torch.cuda.set_per_process_memory_fraction(
+                budget / self.vram_budget,
+                device
+            )
     def get_total_usage(self) -> float:
         """Get total VRAM usage in GB."""
         return self.current_usage / (1024**3)

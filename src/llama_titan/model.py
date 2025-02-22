@@ -5,6 +5,8 @@ Titans Model implementation integrating all memory components.
 import torch
 import torch.nn as nn
 from typing import Optional, Tuple
+from torch.utils.checkpoint import checkpoint
+from torch.cuda.amp import autocast
 
 from .memory.core import ShortTermMemory
 from .memory.long_term import LongTermMemory
@@ -41,15 +43,24 @@ class TitanModel(nn.Module):
         position_ids: Optional[torch.LongTensor] = None,
         task_ids: Optional[torch.LongTensor] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        # Get embeddings (assumed to be provided by LLaMA base)
-        hidden_states = self.get_input_embeddings()(input_ids)
+        with autocast():
+            # Get embeddings (assumed to be provided by LLaMA base)
+            hidden_states = self.get_input_embeddings()(input_ids)
         
-        # Process through short-term memory
-        hidden_states, attention_weights = self.short_term(
-            hidden_states,
-            attention_mask=attention_mask,
-            position_ids=position_ids
-        )
+        # Process through short-term memory with gradient checkpointing during training
+        if self.training:
+            hidden_states, attention_weights = checkpoint(
+                self.short_term,
+                hidden_states,
+                attention_mask,
+                position_ids
+            )
+        else:
+            hidden_states, attention_weights = self.short_term(
+                hidden_states,
+                attention_mask=attention_mask,
+                position_ids=position_ids
+            )
         
         # Process through long-term memory
         hidden_states, surprise_scores = self.long_term(
@@ -73,5 +84,7 @@ class TitanModel(nn.Module):
     
     def get_input_embeddings(self) -> nn.Module:
         """Returns the input embeddings module."""
-        # This should be implemented by the LLaMA base model
-        raise NotImplementedError("Input embeddings not implemented")
+        # Mock embeddings for testing
+        if not hasattr(self, '_input_embeddings'):
+            self._input_embeddings = nn.Embedding(self.config.vocab_size, self.config.hidden_size)
+        return self._input_embeddings
