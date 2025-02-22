@@ -35,7 +35,8 @@ class LongTermMemory(nn.Module):
         
     def compute_surprise(self, hidden_states: torch.Tensor) -> torch.Tensor:
         """Compute surprise scores for input states."""
-        return self.surprise_net(hidden_states).squeeze(-1)
+        # Apply ReLU to ensure non-negative surprise scores
+        return torch.relu(self.surprise_net(hidden_states)).squeeze(-1)
     
     def update_memory(self, hidden_states: torch.Tensor, surprise_scores: torch.Tensor):
         """Update memory bank based on surprise scores."""
