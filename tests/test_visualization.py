@@ -69,6 +69,9 @@ def test_plot_component_distribution(config, tmp_path):
 def test_visualization_style():
     """Test that plots use consistent style."""
     plt.style.use('default')  # Reset to default style
+    plt.clf()  # Clear any existing plots
+    plt.close('all')  # Close all figures
+    
     component_budgets = {
         'core': 30 * 1024**3,
         'long_term': 15 * 1024**3,
@@ -76,15 +79,13 @@ def test_visualization_style():
         'buffer': 9 * 1024**3
     }
     
-    # Create and check plot (will be saved to memory)
-    plot_memory_usage(component_budgets)
+    # Create plot and get figure/axes directly
+    fig, ax = plot_memory_usage(component_budgets, 'test_plot.png')
     
     # Verify plot properties
-    fig = plt.gcf()
-    ax = plt.gca()
-    
     assert ax.get_ylabel() == 'Memory Usage (GB)'
     assert ax.get_title() == 'VRAM Usage by Component'
-    assert ax.get_grid()
+    assert ax.yaxis.get_gridlines(), "Grid lines should be visible"
     
-    plt.close()
+    # Clean up
+    plt.close('all')

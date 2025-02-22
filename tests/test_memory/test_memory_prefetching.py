@@ -5,6 +5,7 @@ Tests for memory prefetching functionality.
 import pytest
 import torch
 import torch.nn as nn
+import numpy as np
 from llama_titan.utils.memory_management import MemoryManager
 
 class TestConfig:
@@ -43,12 +44,30 @@ def test_memory_optimization(config):
 def test_memory_allocation_limits(config):
     manager = MemoryManager(config)
     
-    # Create a large module that exceeds budget
-    large_module = nn.Linear(1000000, 1000000)  # Very large module
+    # Calculate memory requirements for a module
+    dim = 100000  # Size that would exceed budget
+    param_size = dim * dim * 4  # Size in bytes for weights
+    bias_size = dim * 4  # Size in bytes for bias
+    total_size = param_size + bias_size
     
-    # Verify budget enforcement
-    with pytest.raises(RuntimeError):
-        manager.register_component('core', large_module)
+    # Create a small module that we can actually allocate
+    small_module = nn.Linear(100, 100)
+    
+    # Mock the parameter size calculation
+    def mock_numel(self):
+        return dim * dim
+    
+    # Save original numel and replace with mock
+    orig_numel = torch.nn.Parameter.numel
+    torch.nn.Parameter.numel = mock_numel
+    
+    try:
+        # Verify budget enforcement
+        with pytest.raises(RuntimeError, match="memory usage exceeds VRAM budget"):
+            manager.register_component('core', small_module)
+    finally:
+        # Restore original numel
+        torch.nn.Parameter.numel = orig_numel
 
 def test_memory_prefetching_performance(config):
     if not torch.cuda.is_available():

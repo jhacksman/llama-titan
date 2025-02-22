@@ -11,18 +11,40 @@ def plot_memory_usage(component_budgets: Dict[str, int], save_path: str = 'memor
     # Convert bytes to GB for visualization
     usage_gb = {k: v / (1024**3) for k, v in component_budgets.items()}
     
-    # Create bar plot
-    plt.figure(figsize=(10, 6))
-    components = list(usage_gb.keys())
-    usage = [usage_gb[k] for k in components]
+    # Reset style and create plot
+    plt.style.use('default')
+    plt.clf()
+    plt.close('all')
+    
+    # Create new figure and get axes
+    fig, ax = plt.subplots(figsize=(10, 6))
     
     # Plot bars
-    bars = plt.bar(components, usage)
+    components = list(usage_gb.keys())
+    usage = [usage_gb[k] for k in components]
+    bars = ax.bar(components, usage)
     
-    # Customize plot
-    plt.title('VRAM Usage by Component')
-    plt.ylabel('Memory Usage (GB)')
-    plt.grid(True, axis='y', linestyle='--', alpha=0.7)
+    # Set plot properties explicitly
+    ax.set_title('VRAM Usage by Component')
+    ax.set_ylabel('Memory Usage (GB)')
+    ax.grid(True, axis='y', linestyle='--', alpha=0.7)
+    
+    # Add value labels
+    for bar in bars:
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2., height,
+                f'{height:.1f}GB',
+                ha='center', va='bottom')
+    
+    # Force update of properties
+    fig.canvas.draw()
+    plt.draw()
+    
+    # Save plot
+    plt.savefig(save_path, bbox_inches='tight')
+    
+    # Return figure and axes for testing
+    return fig, ax
     
     # Add value labels on top of bars
     for bar in bars:
@@ -44,7 +66,7 @@ def plot_memory_timeline(
     save_path: str = 'memory_timeline.png'
 ):
     """Generate timeline visualization of memory usage."""
-    plt.figure(figsize=(12, 6))
+    fig, ax = plt.subplots(figsize=(12, 6))
     
     # Extract components and timestamps
     components = list(usage_history[0].keys())
@@ -53,14 +75,14 @@ def plot_memory_timeline(
     # Plot line for each component
     for component in components:
         usage = [point[component] / (1024**3) for point in usage_history]
-        plt.plot(timestamps, usage, label=component, marker='o')
+        ax.plot(timestamps, usage, label=component, marker='o')
     
     # Customize plot
-    plt.title('Memory Usage Timeline')
-    plt.xlabel('Time Step')
-    plt.ylabel('Memory Usage (GB)')
-    plt.grid(True, linestyle='--', alpha=0.7)
-    plt.legend()
+    ax.set_title('Memory Usage Timeline')
+    ax.set_xlabel('Time Step')
+    ax.set_ylabel('Memory Usage (GB)')
+    ax.grid(True, linestyle='--', alpha=0.7)
+    ax.legend()
     
     # Adjust layout and save
     plt.tight_layout()
@@ -75,7 +97,7 @@ def plot_component_distribution(
     if not torch.cuda.is_available():
         return
     
-    plt.figure(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(10, 6))
     
     # Get device mapping
     device_map = memory_manager.device_map
@@ -99,15 +121,15 @@ def plot_component_distribution(
                 height = 0
             heights.append(height)
         
-        plt.bar(x, heights, bottom=total_height, label=component)
+        ax.bar(x, heights, bottom=total_height, label=component)
         total_height = [t + h for t, h in zip(total_height, heights)]
     
     # Customize plot
-    plt.title('Component Distribution Across GPUs')
-    plt.xlabel('GPU ID')
-    plt.ylabel('Memory Allocation (GB)')
-    plt.legend()
-    plt.grid(True, axis='y', linestyle='--', alpha=0.7)
+    ax.set_title('Component Distribution Across GPUs')
+    ax.set_xlabel('GPU ID')
+    ax.set_ylabel('Memory Allocation (GB)')
+    ax.legend()
+    ax.grid(True, axis='y', linestyle='--', alpha=0.7)
     
     # Add value labels
     for i in range(num_gpus):
