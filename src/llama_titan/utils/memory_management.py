@@ -52,13 +52,15 @@ class MemoryManager:
             raise ValueError(f"Unknown component: {component}")
         
         budget = self.component_budgets[component]
-        return size_bytes <= budget
+        # Check both component budget and total VRAM budget
+        return (size_bytes <= budget and 
+                (self.current_usage + size_bytes) <= self.vram_budget)
     
     def register_component(self, component: str, module: nn.Module):
         """Register a component and move it to the appropriate device."""
         # Calculate component size
-        param_size = sum(p.numel() * p.element_size() for p in module.parameters())
-        buffer_size = sum(b.numel() * b.element_size() for b in module.buffers())
+        param_size = sum(getattr(p, 'real_numel', p.numel()) * p.element_size() for p in module.parameters())
+        buffer_size = sum(getattr(b, 'real_numel', b.numel()) * b.element_size() for b in module.buffers())
         total_size = param_size + buffer_size
         
         # Check against budget
