@@ -1,0 +1,7 @@
+services:
+  madrone-dashboard:
+    build: .
+    container_name: madrone-dashboard
+    ports:
+      - "8000:8000"
+    restart: unless-stopped

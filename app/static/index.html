@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7223 NW Madrone Way — Live</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body data-theme="day">
+
+<header id="sky">
+  <div class="head-inner">
+    <div>
+      <h1>7223 NW Madrone Way</h1>
+      <p class="sub">Vineyard Mountain &middot; unincorporated Benton County &middot; Corvallis, Oregon 97330<br>
+      Corvallis Rural Fire Protection District &middot; bordered by McDonald-Dunn Research Forest</p>
+    </div>
+    <div class="clockbox">
+      <div id="clock">--:--:--</div>
+      <div id="clockdate">&nbsp;</div>
+      <div id="suntrack"><div id="sunarc"></div><div id="sundot"></div></div>
+      <div id="sunline">&nbsp;</div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div id="alertbar" class="hidden"></div>
+
+  <section class="grid">
+
+    <article class="card" id="card-burn">
+      <h2><span class="dot" id="burn-dot"></span>Burn status today</h2>
+      <div class="card-body" id="burn-body"><p class="loading">Loading ODF daily announcement…</p></div>
+    </article>
+
+    <article class="card" id="card-weather">
+      <h2><span class="dot dot-sky"></span>Weather</h2>
+      <div class="card-body" id="weather-body"><p class="loading">Loading NWS forecast…</p></div>
+    </article>
+
+    <article class="card" id="card-sun">
+      <h2><span class="dot dot-sun"></span>Sun &amp; sky</h2>
+      <div class="card-body" id="sun-body"><p class="loading">Computing…</p></div>
+    </article>
+
+    <article class="card" id="card-fire">
+      <h2><span class="dot dot-fire"></span>Fire hazard</h2>
+      <div class="card-body" id="fire-body"><p class="loading">Checking active incidents…</p></div>
+    </article>
+
+  </section>
+
+  <section class="card wide" id="card-map">
+    <h2><span class="dot dot-map"></span>The neighborhood
+      <span class="h2-note">real plat &amp; address data — Benton County taxlots, National Address Database, OpenStreetMap</span>
+    </h2>
+    <div id="map-wrap">
+      <canvas id="map"></canvas>
+      <div id="map-tip" class="hidden"></div>
+      <div id="map-legend"></div>
+    </div>
+    <div id="ring-stats" class="card-body"></div>
+  </section>
+
+</main>
+
+<footer>
+  <span id="foot-updated"></span> &middot; live sources: NWS api.weather.gov &middot; ODF smkmgt.com &middot; NIFC WFIGS &middot; Open-Meteo AQ
+  &middot; burn advisory line <a href="tel:5417666971">541-766-6971</a>
+</footer>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

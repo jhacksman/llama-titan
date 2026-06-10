@@ -1,0 +1,19 @@
+# systemd unit for running the dashboard directly on a self-hosted box.
+#   sudo cp deploy/madrone-dashboard.service /etc/systemd/system/
+#   sudo systemctl enable --now madrone-dashboard
+# Adjust User and WorkingDirectory to your install location.
+
+[Unit]
+Description=7223 NW Madrone Way live dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=www-data
+WorkingDirectory=/opt/madrone-dashboard
+ExecStart=/opt/madrone-dashboard/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
